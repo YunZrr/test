@@ -7,33 +7,63 @@ import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { useDispatch } from "react-redux";
 
 
-const AIRDROP_OBJ = '0x765dc322bed2fec830da868a6a701bfa13980676b51bb9ecb99f5d350b306187'
-const TOPN_OBJ = '0xb29f446af3d60ab02df2793cc7fd6cf9a7ab9d2c9ae05a723338091a28c153f3'
-const TOUCH_SUPPLY = '0x7976874edaef1f6c021ba9b390468bfdf55677f854d8ef97f439c948867cffd9'
-const CLAIM_AIRDROP_FN = '0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch::claim_airdrop'
-const CLAIM_TOPN_FN = '0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch::claim_topn'
-// const COIN_TOUCH_TYPE = '0x2::coin::Coin<0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch::TOUCH>'
-const COIN_TOUCH_TYPE = '0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch::TOUCH'
+const AIRDROP_OBJ = '0x92d6da8f322cb96f43b41172967e3411832b22689869a54b9a4b96ffc4a86a0f'
+const TOPN_OBJ = '0x9a8a65cb31a83df2202abe21b3956f00d92a68ecbd144efa752164d3d14b7a66'
+const TOUCH_SUPPLY = '0x0ad2091fe715651515c65a7f0f9d6fb52de53ebd99302dd1633a1dd78fb811a6'
+const CLAIM_AIRDROP_FN = '0x59b94aaeaa16165fd4e6b384b1ab889790f5f6b01c02a3a1636ab811dfb8e5a1::touch::claim_airdrop'
+const CLAIM_TOPN_FN = '0x59b94aaeaa16165fd4e6b384b1ab889790f5f6b01c02a3a1636ab811dfb8e5a1::touch::claim_topn'
+const COIN_TYPE = '0x59b94aaeaa16165fd4e6b384b1ab889790f5f6b01c02a3a1636ab811dfb8e5a1::touch::TOUCH'
 
-const CLAIM_NFT_FN = '0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch_level::claim'
-const ELIGIBLE_OBJ = '0x85b343fe7a3896ec2feeecf023431f7150ff7c405efe5a4779867c1bd63617dd'
-const NFT_OBJ_TYPE = '0x653fac157ea5fc2c2a825498e60e92a22a4d32af7c951a17d191b57e42f30cfc::touch_level::TouchProfile'
+const CLAIM_NFT_FN = '0x59b94aaeaa16165fd4e6b384b1ab889790f5f6b01c02a3a1636ab811dfb8e5a1::touch_level::claim'
+const ELIGIBLE_OBJ = '0x4a341d8551eb2dedd0095c57e06a64bd4aa454e629beb48694040c65045a2cb1'
+const NFT_OBJ_TYPE = '0x59b94aaeaa16165fd4e6b384b1ab889790f5f6b01c02a3a1636ab811dfb8e5a1::touch_level::TouchProfile'
+const VIRTUOSO_LV2 = 'https://bafybeiekxx6cmiwkiajqjzu6o26dni4m7cpnjf66pdsuskzbpiaxagebvi.ipfs.cf-ipfs.com/Virtuoso-2-Daniel%20Craig.svg'
+const VIRTUOSO_LV3 = 'https://bafybeiekxx6cmiwkiajqjzu6o26dni4m7cpnjf66pdsuskzbpiaxagebvi.ipfs.cf-ipfs.com/Virtuoso-3-Michael%20Jordan.svg'
 
 const Login = () => {
     // const account = useSelector(state => state.user.walletAddr)
     const currentAccount = useCurrentAccount();
-    // const dispatch = useDispatch()
-    // useEffect(async () => {
-    //     let touchCoin = await suiClient.getBalance({
-    //         owner: currentAccount.address,
-    //         coinType: COIN_TOUCH_TYPE
-    //     });
-    //     setTouBalance((Number(touchCoin.totalBalance)/10**9).toFixed(2))
-    // }, [currentAccount])
+    const [open, setOpen] = useState(false);
     const [touBalance, setTouBalance] = useState('0')
-    const [imageUrlList, setImageUrlList] = useState([])
+    // TODO: image_url list replace imageUrl
+    const [imageUrl, setImageUrl] = useState('')
     const suiClient = useSuiClient();
     const { mutate: signAndExecuteTransactionBlock } = useSignAndExecuteTransactionBlock();
+
+    const getBalance = async () => {
+        const { totalBalance } = await suiClient.getBalance({
+            owner: currentAccount.address,
+            coinType: COIN_TYPE
+        });
+        return totalBalance
+    }
+
+    useEffect(() => {
+        setTouBalance('0'); // TODO: switch wallet optimize
+        const setBalance = async () => {
+            if (!currentAccount) return
+            const totalBalance = await getBalance();
+            const decimal = await getDecimal()
+            setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(2))
+        }
+        setBalance();
+    }, [currentAccount])
+
+
+    const getDecimal = async () => {
+        const { decimals } = await suiClient.getCoinMetadata({
+            coinType: COIN_TYPE
+        });
+        return decimals
+    }
+    const getBalanceOld = async () => {
+        const { totalBalance } = await suiClient.getBalance({
+            owner: currentAccount.address,
+            coinType: COIN_TYPE
+        });
+        const decimal = await getDecimal()
+        setTouBalance((Number(totalBalance)/10**decimal).toFixed(2))
+    }
 
     const claimTouch = () => {
         const txb = new TransactionBlock();
@@ -52,13 +82,9 @@ const Login = () => {
                     suiClient.waitForTransactionBlock({
                         digest: tx.digest
                     }).then(async () => {
-                        let touchCoin = await suiClient.getBalance({
-                            owner: currentAccount.address,
-                            coinType: COIN_TOUCH_TYPE
-                        });
-                        // TODO: get coin decimal use the following sdk
-                        // suiClient.getCoinMetadata()
-                        setTouBalance((Number(touchCoin.totalBalance)/10**9).toFixed(2))
+                        const totalBalance = await getBalance();
+                        const decimal = await getDecimal()
+                        setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(2))
                     })
                 }
             }
@@ -89,17 +115,31 @@ const Login = () => {
                     }).then(async () => {
                         // TODO: get image url
                         // 根据规则得到image_url
+                        setImageUrl(VIRTUOSO_LV2) 
                     })
                 }
             }
         )
     }
 
+    const upgradeNFT = async () => {
+        // TODO: get current NFT info and call move function to upgrade NFT
+        setImageUrl(VIRTUOSO_LV3)
+    }
+
     return (
         <div style={{backgroundColor:'#f3f0ff', height:'100vh'}}>
             <div className="connect-btn">
                 <div style={{padding: '15px 0 0 15px'}}>
-                    {currentAccount && <div>{ `Balance: ${touBalance}` }</div>}
+                    {
+                        currentAccount &&
+                        <div className="tou-bal">
+                            <img width={'30px'} src="https://ipfs.io/ipfs/bafybeig7cm6xn2p3wy6yw4do4o7edg5ikm77yyc3jr3tnpddonsxfnkxki/touch.png" />
+                            <div style={{marginLeft: '5px'}}>
+                                {`Touch: ${touBalance}`}
+                            </div>
+                        </div>
+                    }
                 </div>
                 <ConnectButton className="btn1" />
             </div>
@@ -109,6 +149,15 @@ const Login = () => {
             <div className="btn2">
                 {currentAccount && <Button type="primary" size="large" onClick={claimNFT}>Claim TouchNFT</Button>}
             </div>
+            {
+                currentAccount &&
+                <div style={{marginTop: '60px'}}>
+                    <img src={imageUrl} />
+                    <div className="btn2">
+                        {imageUrl && <Button type="primary" size="large" onClick={upgradeNFT}>Upgrade To Lv.3</Button>}
+                    </div>
+                </div>
+            }
         </div>
     )
 }

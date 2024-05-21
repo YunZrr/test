@@ -1,6 +1,14 @@
+import { getFullnodeUrl, SuiClient } from '@mysten/sui.js/client';
 import { getFaucetHost, requestSuiFromFaucetV0 } from '@mysten/sui.js/faucet';
 
-const GetCoin = ({client, account, env}) => {
+// use getFullnodeUrl to define Devnet RPC location
+const env = 'devnet';
+const rpcUrl = getFullnodeUrl('devnet');
+// create a client connected to devnet
+const client = new SuiClient({ url: rpcUrl });
+const account = '0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'
+
+const GetCoin = () => {
     const getToken = async () => {
         await requestSuiFromFaucetV0({
             host: getFaucetHost(env),

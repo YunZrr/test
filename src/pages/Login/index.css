@@ -10,7 +10,13 @@
 }
 
 .btn2 {
-    margin-top: 100px;
+    margin-top: 60px;
     display: flex;
     justify-content: center;
+}
+
+.tou-bal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
