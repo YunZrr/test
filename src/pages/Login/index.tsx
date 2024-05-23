@@ -3,18 +3,23 @@ import { Button } from 'antd';
 // import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { suiClient } from "@/utils/sui";
+import { suiClient, signer } from "@/utils/sui";
 // import { useDispatch } from "react-redux";
 import {
-    COIN_TYPE, TOPN_OBJ, TOUCH_SUPPLY, CLAIM_TOPN_FN, CLAIM_NFT_FN,
-    ELIGIBLE_OBJ, VIRTUOSO_LV2, VIRTUOSO_LV3,
-    // AIRDROP_OBJ, CLAIM_AIRDROP_FN, NFT_OBJ_TYPE,
+    COIN_TYPE, TOPN_OBJ, TOUCH_SUPPLY, CLAIM_TOPN_FN, VIRTUOSO_LV2, VIRTUOSO_LV3,
+    AIRDROP_OBJ, CLAIM_AIRDROP_FN, NFT_OBJ_TYPE,
+    MINT_TO,
+    ADMIN_CAP,
+    NFT_INFOS,
 } from "@/utils/constants";
+import { useTitle } from "@/utils/func";
 
 
 const Login = () => {
+    useTitle("Login")
     // const account = useSelector(state => state.user.walletAddr)
     const currentAccount = useCurrentAccount();
+    const [walletAddr, setWalletAddr] = useState('')
     const [touBalance, setTouBalance] = useState('0')
     // TODO: image_url list replace imageUrl
     const [imageUrl, setImageUrl] = useState('')
@@ -22,6 +27,7 @@ const Login = () => {
 
     const getBalance = async () => {
         if (!currentAccount) return 
+        setWalletAddr(currentAccount.address)
         const { totalBalance } = await suiClient.getBalance({
             owner: currentAccount.address,
             coinType: COIN_TYPE
@@ -37,12 +43,12 @@ const Login = () => {
     }
 
     useEffect(() => {
-        setTouBalance('0'); // TODO: switch wallet optimize
+        setTouBalance('0'); // TODO: switch wallet 
         const setBalance = async () => {
             const totalBalance = await getBalance();
             const decimal = await getDecimal()
             if (decimal) {
-                setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(2))
+                setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(0))
             }
         }
         setBalance();
@@ -51,8 +57,10 @@ const Login = () => {
     const claimTouch = () => {
         const txb = new TransactionBlock();
         txb.moveCall({
-            arguments: [txb.object(TOPN_OBJ), txb.object(TOUCH_SUPPLY)],
-            target: CLAIM_TOPN_FN
+            // arguments: [txb.object(TOPN_OBJ), txb.object(TOUCH_SUPPLY)],
+            // target: CLAIM_TOPN_FN,
+            arguments: [txb.object(AIRDROP_OBJ), txb.object(TOUCH_SUPPLY)],
+            target: CLAIM_AIRDROP_FN,
         });
 
         signAndExecuteTransactionBlock(
@@ -68,7 +76,7 @@ const Login = () => {
                         const totalBalance = await getBalance();
                         const decimal = await getDecimal()
                         if (decimal) {
-                            setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(2))
+                            setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(0))
                         }
                     })
                 }
@@ -76,35 +84,40 @@ const Login = () => {
         )
     }
 
-    const claimNFT = () => {
+    const getNFT = async () => {
         const txb = new TransactionBlock();
+
+        const nft = NFT_INFOS.filter(item => 
+            item.personality == 'Virtuoso' && item.level == '2'
+        )
+        console.log(nft)
         txb.moveCall({
             arguments: [
-                txb.object(ELIGIBLE_OBJ),
-                txb.pure.string('Daniel Craig'),
-                txb.pure.string('Virtuoso'),
-                txb.pure.string('Bold and practical experimenters, masters of all kinds of tools.')
+                txb.object(ADMIN_CAP),
+                txb.pure.string(nft[0].fame),
+                txb.pure.string(nft[0].personality),
+                txb.pure.u8(Number(nft[0].level)),
+                txb.pure.string(nft[0].desc),
+                txb.pure.string(nft[0].url.slice(0, nft[0].url.lastIndexOf('/'))),
+                txb.pure.address(walletAddr)
             ],
-            target: CLAIM_NFT_FN
+            target: MINT_TO 
         });
 
-        signAndExecuteTransactionBlock(
-            {
-                transactionBlock: txb,
-                options: { showEffects: true },
-            },
-            {
-                onSuccess: (tx) => {
-                    suiClient.waitForTransactionBlock({
-                        digest: tx.digest
-                    }).then(async () => {
-                        // TODO: get image url
-                        // 根据规则得到image_url
-                        setImageUrl(VIRTUOSO_LV2) 
-                    })
-                }
-            }
-        )
+        const txRes = await suiClient.signAndExecuteTransactionBlock({
+            signer,
+            transactionBlock: txb,
+        })
+        if (txRes) {
+            console.log(txRes)
+            setImageUrl(nft[0].url)
+            let nft_objs = await suiClient.getOwnedObjects({
+                owner: walletAddr,
+                options: { showType: true, showContent: true },
+                filter: {StructType: NFT_OBJ_TYPE}
+            })
+            console.log(nft_objs.data.map(obj => obj.data?.content))
+        }
     }
 
     const upgradeNFT = async () => {
@@ -133,7 +146,7 @@ const Login = () => {
                 {currentAccount && <Button type="primary" size="large" onClick={claimTouch}>Claim $TOU</Button>}
             </div>
             <div className="mt-16 flex justify-center">
-                {currentAccount && <Button type="primary" size="large" onClick={claimNFT}>Claim TouchNFT</Button>}
+                {currentAccount && <Button type="primary" size="large" onClick={getNFT}>Get NFT</Button>}
             </div>
             {
                 currentAccount &&

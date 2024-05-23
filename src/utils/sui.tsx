@@ -15,7 +15,8 @@ const network = 'devnet'
 // const secretKeyBytes = fromB64(secretKey).slice(1); // 发起方账户私钥
 // const signer = Ed25519Keypair.fromSecretKey(secretKeyBytes, ); // 生成签名者
 
-const mnemonic = 'inmate grid multiply problem bleak unusual armor exchange blade agree cross tilt'
+// const mnemonic = 'inmate grid multiply problem bleak unusual armor exchange blade agree cross tilt'
+const mnemonic = 'ocean swallow exile fence front hundred gun joke present turn brain obscure'
 // from mnemonic
 const signer = Ed25519Keypair.deriveKeypair(mnemonic)
 

@@ -9,13 +9,13 @@ const router = createBrowserRouter([
         element: <Login />
     },
     {
-        path: '/coin',
-        element: <GetCoin />
-    },
-    {
         path: '/airdrop',
         element: <UpdateEligible />
-    }
+    },
+    {
+        path: '/getter',
+        element: <GetCoin />
+    },
 ])
 
 export default router
