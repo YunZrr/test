@@ -1,162 +1,143 @@
-import { ConnectButton, useCurrentAccount, useSignAndExecuteTransactionBlock } from "@mysten/dapp-kit";
+import { ConnectButton, useCurrentAccount, useSignAndExecuteTransactionBlock, useSuiClientMutation } from "@mysten/dapp-kit";
 import { Button } from 'antd';
-// import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { suiClient, signer } from "@/utils/sui";
-// import { useDispatch } from "react-redux";
+import { suiClient } from "@/utils/sui";
 import {
-    COIN_TYPE, TOPN_OBJ, TOUCH_SUPPLY, CLAIM_TOPN_FN, VIRTUOSO_LV2, VIRTUOSO_LV3,
-    AIRDROP_OBJ, CLAIM_AIRDROP_FN, NFT_OBJ_TYPE,
-    MINT_TO,
-    ADMIN_CAP,
-    NFT_INFOS,
+    INIT_GAME,
+    WZQ_GAME_INFOS,
+    JOIN_GAME,
+    PLAY_GAME,
 } from "@/utils/constants";
 import { useTitle } from "@/utils/func";
 
 
 const Login = () => {
     useTitle("Login")
-    // const account = useSelector(state => state.user.walletAddr)
     const currentAccount = useCurrentAccount();
     const [walletAddr, setWalletAddr] = useState('')
-    const [touBalance, setTouBalance] = useState('0')
-    // TODO: image_url list replace imageUrl
-    const [imageUrl, setImageUrl] = useState('')
-    const { mutate: signAndExecuteTransactionBlock } = useSignAndExecuteTransactionBlock();
-
-    const getBalance = async () => {
-        if (!currentAccount) return 
-        setWalletAddr(currentAccount.address)
-        const { totalBalance } = await suiClient.getBalance({
-            owner: currentAccount.address,
-            coinType: COIN_TYPE
-        });
-        return totalBalance
-    }
-
-    const getDecimal = async () => {
-        const res = await suiClient.getCoinMetadata({
-            coinType: COIN_TYPE
-        });
-        if (res) return res.decimals;
-    }
+    const { mutateAsync: signAndExecuteTransactionBlock } = useSignAndExecuteTransactionBlock()
+    const { mutateAsync: waitForTransactionBlock } = useSuiClientMutation('waitForTransactionBlock')
 
     useEffect(() => {
-        setTouBalance('0'); // TODO: switch wallet 
-        const setBalance = async () => {
-            const totalBalance = await getBalance();
-            const decimal = await getDecimal()
-            if (decimal) {
-                setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(0))
-            }
+        if (currentAccount) {
+            setWalletAddr(currentAccount.address)
         }
-        setBalance();
     }, [currentAccount])
 
-    const claimTouch = () => {
-        const txb = new TransactionBlock();
-        txb.moveCall({
-            // arguments: [txb.object(TOPN_OBJ), txb.object(TOUCH_SUPPLY)],
-            // target: CLAIM_TOPN_FN,
-            arguments: [txb.object(AIRDROP_OBJ), txb.object(TOUCH_SUPPLY)],
-            target: CLAIM_AIRDROP_FN,
-        });
+    const initGame = async () => {
+        // 拿到所有的 SUI coin
+        let res = await suiClient.getCoins({
+            owner: walletAddr,
+        })
+        let sui_coins = res.data.map(obj => obj.coinObjectId)
+        let coin_sui = sui_coins[0]
+        console.log(coin_sui)
 
-        signAndExecuteTransactionBlock(
-            {
-                transactionBlock: txb,
-                options: { showEffects: true },
-            },
-            {
-                onSuccess: (tx) => {
-                    suiClient.waitForTransactionBlock({
-                        digest: tx.digest
-                    }).then(async () => {
-                        const totalBalance = await getBalance();
-                        const decimal = await getDecimal()
-                        if (decimal) {
-                            setTouBalance((Number(totalBalance) / 10 ** decimal).toFixed(0))
-                        }
-                    })
-                }
-            }
-        )
-    }
-
-    const getNFT = async () => {
         const txb = new TransactionBlock();
 
-        const nft = NFT_INFOS.filter(item => 
-            item.personality == 'Virtuoso' && item.level == '2'
-        )
-        console.log(nft)
+        // txb.mergeCoins(txb.object(sui_coins[0]), [ txb.object(sui_coins[1]) ])
+
         txb.moveCall({
             arguments: [
-                txb.object(ADMIN_CAP),
-                txb.pure.string(nft[0].fame),
-                txb.pure.string(nft[0].personality),
-                txb.pure.u8(Number(nft[0].level)),
-                txb.pure.string(nft[0].desc),
-                txb.pure.string(nft[0].url.slice(0, nft[0].url.lastIndexOf('/'))),
-                txb.pure.address(walletAddr)
+                txb.object(WZQ_GAME_INFOS),
+                txb.object(coin_sui),
+                txb.pure(500000000),  // 0.5 SUI
             ],
-            target: MINT_TO 
+            target: INIT_GAME,
         });
 
-        const txRes = await suiClient.signAndExecuteTransactionBlock({
-            signer,
+        const tx = await signAndExecuteTransactionBlock({
             transactionBlock: txb,
         })
-        if (txRes) {
-            console.log(txRes)
-            setImageUrl(nft[0].url)
-            let nft_objs = await suiClient.getOwnedObjects({
-                owner: walletAddr,
-                options: { showType: true, showContent: true },
-                filter: {StructType: NFT_OBJ_TYPE}
-            })
-            console.log(nft_objs.data.map(obj => obj.data?.content))
-        }
+        await waitForTransactionBlock({
+            digest: tx.digest,
+        })
     }
 
-    const upgradeNFT = async () => {
-        // TODO: get current NFT info and call move function to upgrade NFT
-        setImageUrl(VIRTUOSO_LV3)
+    const joinGame = async () => {
+        // 拿到所有的 SUI coin
+        let res = await suiClient.getCoins({
+            owner: walletAddr,
+        })
+        let sui_coins = res.data.map(obj => obj.coinObjectId)
+        let coin_sui = sui_coins[0]
+        console.log(coin_sui)
+
+        const txb = new TransactionBlock();
+
+        // txb.mergeCoins(txb.object(sui_coins[0]), [ txb.object(sui_coins[1]) ])
+
+        txb.moveCall({
+            arguments: [
+                txb.object(WZQ_GAME_INFOS),
+                txb.pure.address('0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'),
+                txb.object(coin_sui),
+                txb.pure(500000000),  // 0.5 SUI
+            ],
+            target: JOIN_GAME,
+        });
+
+        const tx = await signAndExecuteTransactionBlock({
+            transactionBlock: txb,
+        })
+        await waitForTransactionBlock({
+            digest: tx.digest,
+        })
+    }
+
+    const playGame = async () => {
+        // 合约中规定每人轮流下棋
+        // 每次下棋前，拿到链上当前棋局，显示在一旁，防止玩家作弊
+        // 前端棋盘用本地数据渲染，链上棋盘缩小放右上角，用于实时对照
+        let res = await suiClient.getObject({
+            id: WZQ_GAME_INFOS,
+        })
+        // TODO: 怎么拿到链上棋盘数据
+        // 可查看： https://suiscan.xyz/devnet/object/0x96fb37431f8ef4a7e778bb2652d01b92a356ed12b14dd53a905cd32c37f321e4
+        console.log(res)
+
+        const txb = new TransactionBlock();
+        txb.moveCall({
+            arguments: [
+                txb.object(WZQ_GAME_INFOS),
+                txb.pure.address('0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'),
+                txb.pure.address('0xf2b6e76f00a8a1c9de435484254f33585870682fea82aa8727d7ed95268a5232'),
+                // 在坐标 (1, 1) 处落子
+                txb.pure(1),
+                txb.pure(1),
+            ],
+            target: PLAY_GAME,
+        });
+
+        const tx = await signAndExecuteTransactionBlock({
+            transactionBlock: txb,
+        })
+        await waitForTransactionBlock({
+            digest: tx.digest,
+        })
+        //     let nft_objs = await suiClient.getOwnedObjects({
+        //         owner: walletAddr,
+        //         options: { showType: true, showContent: true },
+        //         filter: {StructType: NFT_OBJ_TYPE}
+        //     })
+        //     console.log(nft_objs.data.map(obj => obj.data?.content))
     }
 
     return (
         <div style={{backgroundColor:'#f3f0ff', height:'100vh'}}>
-            <div className=" flex justify-between pt-4 pr-4">
-                <div style={{padding: '15px 0 0 15px'}}>
-                    {
-                        currentAccount &&
-                        <div className=" flex justify-center items-center">
-                            <img width={'30px'} src="https://ipfs.io/ipfs/bafybeig7cm6xn2p3wy6yw4do4o7edg5ikm77yyc3jr3tnpddonsxfnkxki/touch.png" />
-                            <div style={{marginLeft: '5px'}}>
-                                {`Touch: ${touBalance}`}
-                            </div>
-                        </div>
-                    }
-                </div>
-                {/* // TODO: tailwind cannot use here? */}
+            <div className="pt-4 pr-4">
                 <ConnectButton className=" text-red-300 bg-red-200" style={{backgroundColor:'yellowgreen'}} />
             </div>
             <div className="mt-16 flex justify-center">
-                {currentAccount && <Button type="primary" size="large" onClick={claimTouch}>Claim $TOU</Button>}
+                {currentAccount && <Button type="primary" size="large" onClick={initGame}>Init Game</Button>}
             </div>
             <div className="mt-16 flex justify-center">
-                {currentAccount && <Button type="primary" size="large" onClick={getNFT}>Get NFT</Button>}
+                {currentAccount && <Button type="primary" size="large" onClick={joinGame}>Join Game</Button>}
             </div>
-            {
-                currentAccount &&
-                <div className="mt-16">
-                    <img src={imageUrl} />
-                    <div className="mt-16 flex justify-center">
-                        {imageUrl && <Button type="primary" size="large" onClick={upgradeNFT}>Upgrade To Lv.3</Button>}
-                    </div>
-                </div>
-            }
+            <div className="mt-16 flex justify-center">
+                {currentAccount && <Button type="primary" size="large" onClick={playGame}>Play Game</Button>}
+            </div>
         </div>
     )
 }
