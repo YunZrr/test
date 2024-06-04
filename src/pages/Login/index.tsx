@@ -8,6 +8,7 @@ import {
     WZQ_GAME_INFOS,
     JOIN_GAME,
     PLAY_GAME,
+    ACCOUNTS,
 } from "@/utils/constants";
 import { useTitle } from "@/utils/func";
 
@@ -25,6 +26,9 @@ const Login = () => {
         }
     }, [currentAccount])
 
+    // devnet 先领取水, 发起者和参与者都领取水
+    // 将发起者钱包地址填入 utils/constants下的 ACCOUNTS 第一个元素
+    // 连接发起者钱包地址，调用该函数发起一局游戏
     const initGame = async () => {
         // 拿到所有的 SUI coin
         let res = await suiClient.getCoins({
@@ -55,6 +59,7 @@ const Login = () => {
         })
     }
 
+    // 参与者调用此函数
     const joinGame = async () => {
         // 拿到所有的 SUI coin
         let res = await suiClient.getCoins({
@@ -71,7 +76,7 @@ const Login = () => {
         txb.moveCall({
             arguments: [
                 txb.object(WZQ_GAME_INFOS),
-                txb.pure.address('0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'),
+                txb.pure.address(ACCOUNTS[0]),
                 txb.object(coin_sui),
                 txb.pure(500000000),  // 0.5 SUI , 合约已优化，暂未部署，必须传入一样的数值
             ],
@@ -101,11 +106,11 @@ const Login = () => {
         txb.moveCall({
             arguments: [
                 txb.object(WZQ_GAME_INFOS),
-                txb.pure.address('0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'),
-                txb.pure.address('0xf2b6e76f00a8a1c9de435484254f33585870682fea82aa8727d7ed95268a5232'),
+                txb.pure.address(ACCOUNTS[0]),
+                txb.pure.address(ACCOUNTS[1]),
                 // 在坐标 (1, 1) 处落子
                 txb.pure(1),
-                txb.pure(1),
+                txb.pure(1), // 不能在同一个坐标下子，合约已优化 ，暂未部署
             ],
             target: PLAY_GAME,
         });

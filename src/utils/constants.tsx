@@ -1,6 +1,8 @@
 // addresses
 export const ACCOUNTS = [
+    // 发起者 starter
     '0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d',
+    // 参与者 participant
     '0xf2b6e76f00a8a1c9de435484254f33585870682fea82aa8727d7ed95268a5232',
 ]
 
