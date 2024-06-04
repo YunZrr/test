@@ -73,7 +73,7 @@ const Login = () => {
                 txb.object(WZQ_GAME_INFOS),
                 txb.pure.address('0x1551c0853e5b1dcce1e02b59a3b65ce815549b798adebb721e2f1cf0d7427b6d'),
                 txb.object(coin_sui),
-                txb.pure(500000000),  // 0.5 SUI
+                txb.pure(500000000),  // 0.5 SUI , 合约已优化，暂未部署，必须传入一样的数值
             ],
             target: JOIN_GAME,
         });
